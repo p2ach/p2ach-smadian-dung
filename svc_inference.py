@@ -8,6 +8,22 @@ class_map = {
     13: 4111, 14: 4111, 15: 4122, 16: 4121#일부만 검출될 경우 결과제외
 }
 
+
+def filter_case(bin_count):
+    if bin_count[1] > 120 or bin_count[2] > 120:
+        bin_count[3]=bin_count[4]=0
+
+    if bin_count[5] > 120 or bin_count[6] > 120:
+        bin_count[7]=bin_count[8]=0
+
+    if bin_count[9] > 120 or bin_count[10] > 120:
+        bin_count[11]=bin_count[12]=0
+
+    if bin_count[13] > 120 or bin_count[14] > 120:
+        bin_count[15]=bin_count[16]=0
+
+    return bin_count
+
 def postprocess(im_tensor,logits):
     logits = F.interpolate(logits, size=im_tensor.shape[1:], mode='bilinear', align_corners=True)
     max_logits, label_reco = torch.max(torch.softmax(logits, dim=1), dim=1)
@@ -16,18 +32,20 @@ def postprocess(im_tensor,logits):
     bin_count = np.bincount(np_label_reco.reshape(-1))
     bin_count[0] = 0
     found_class_num = bin_count.argmax()
-    bin_count = [bc if bc > 200 else 0 for bc in bin_count]
+    bin_count = [bc if bc > 120 else 0 for bc in bin_count]
     count_size = 0
     for _s in bin_count:
         if _s > 0:
             count_size += 1
+
+    bin_count=filter_case(bin_count)
+
     list_result_outputs=[]
     if count_size==1:
         list_result_outputs.append(class_map[int(found_class_num)])
         # return list_result_output
 
     elif count_size > 1:
-        print("bin count", bin_count)
         for i, _s in enumerate(bin_count):
             if _s > 0:
                 if i == 3:
