@@ -10,6 +10,11 @@ class_map = {
 
 
 def filter_case(bin_count):
+    if len(bin_count)<17:
+        while len(bin_count)<17:
+            bin_count.append(0)
+
+
     if bin_count[1] > 120 or bin_count[2] > 120:
         bin_count[3]=bin_count[4]=0
 
