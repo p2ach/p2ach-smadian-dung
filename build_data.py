@@ -111,7 +111,7 @@ def transform(image, label, logits=None, crop_size=(512, 512), scale_size=(0.8, 
 
     # Transform to tensor
     image = transforms_f.to_tensor(image)
-    label = (transforms_f.to_tensor(label) * 255).long()
+    label = transforms_f.to_tensor(label).long()# * 255).long()
     label[label == 255] = -1  # invalid pixels are re-mapped to index -1
     if logits is not None:
         logits = transforms_f.to_tensor(logits)
@@ -202,7 +202,8 @@ def one_sample_transform(image, label, logits=None, crop_size=(448, 448), scale_
 
     # Transform to tensor
     image = transforms_f.to_tensor(image)
-    label = (transforms_f.to_tensor(label) * 255).long()
+    # label = (transforms_f.to_tensor(label) * 255).long()
+    label = transforms_f.to_tensor(label).long()
     label[label == 255] = -1  # invalid pixels are re-mapped to index -1
     if logits is not None:
         logits = transforms_f.to_tensor(logits)
@@ -213,6 +214,91 @@ def one_sample_transform(image, label, logits=None, crop_size=(448, 448), scale_
         return image, label, logits
     else:
         return image, label
+
+
+def one_sample_transform_nolabel(image, logits=None, crop_size=(448, 448), scale_size=(0.8, 1.0), augmentation=True):
+    # Random rescale image
+    raw_w, raw_h = image.size
+    # scale_ratio = random.uniform(scale_size[0], scale_size[1])
+    #
+    # resized_size = (600, 600)
+    #
+    # # if logits is not None:
+    # #     logits = transforms_f.resize(logits, resized_size, Image.NEAREST)
+    # #
+    # # ori_resized_size = (448, 448)
+    # #
+    # # image = transforms_f.resize(image, ori_resized_size, Image.BILINEAR)
+    # # label = transforms_f.resize(label, ori_resized_size, Image.NEAREST)
+    #
+    #
+    # if raw_w > 600 or raw_h > 600:
+    #     if raw_w > raw_h:
+    #         as_ratio = raw_w / 600
+    #     else:
+    #         as_ratio = raw_h / 600
+    #     # if augmentation:
+    #     # if torch.rand(1) > 0.5:
+    #     ori_resized_size= (int(raw_h / as_ratio),int(raw_w / as_ratio))
+    #     # ori_resized_size = (512, 512)
+    #
+    #     image = transforms_f.resize(image, ori_resized_size, Image.BILINEAR)
+    #     label = transforms_f.resize(label, ori_resized_size, Image.NEAREST)
+    #     # raw_w, raw_h = image.size
+    # else:
+    #     ori_resized_size = (raw_h, raw_w)
+    #
+    #
+    # # Add padding if rescaled image size is less than crop size
+    # if crop_size == -1:  # use original im size without crop or padding
+    #     crop_size = (raw_h, raw_w)
+    # #
+    # if ori_resized_size[0] < resized_size[0] or ori_resized_size[1] < resized_size[1]:
+    #     right_pad, bottom_pad = max(resized_size[1] - ori_resized_size[1], 0), max(resized_size[0] - ori_resized_size[0], 0)
+    #     image = transforms_f.pad(image, padding=(0, 0, right_pad, bottom_pad), padding_mode='reflect')
+    #     label = transforms_f.pad(label, padding=(0, 0, right_pad, bottom_pad), fill=255, padding_mode='constant')
+    #     if logits is not None:
+    #         logits = transforms_f.pad(logits, padding=(0, 0, right_pad, bottom_pad), fill=0, padding_mode='constant')
+
+    ori_resized_size = (448, 448)
+
+    image = transforms_f.resize(image, ori_resized_size, Image.BILINEAR)
+
+    # # Random Cropping
+    # i, j, h, w = transforms.RandomCrop.get_params(image, output_size=crop_size)
+    # image = transforms_f.crop(image, i, j, h, w)
+    # label = transforms_f.crop(label, i, j, h, w)
+    # if logits is not None:
+    #     logits = transforms_f.crop(logits, i, j, h, w)
+
+    # if augmentation:
+    #     # Random color jitter
+    #     if torch.rand(1) > 0.2:
+    #         color_transform = transforms.ColorJitter((0.75, 1.25), (0.75, 1.25), (0.75, 1.25), (-0.25, 0.25)) # For PyTorch 1.9/TorchVision 0.10 users
+    #         # color_transform = transforms.ColorJitter.get_params((0.75, 1.25), (0.75, 1.25), (0.75, 1.25), (-0.25, 0.25))
+    #         image = color_transform(image)
+    #
+    #     # Random Gaussian filter
+    #     if torch.rand(1) > 0.5:
+    #         sigma = random.uniform(0.15, 1.15)
+    #         image = image.filter(ImageFilter.GaussianBlur(radius=sigma))
+    #
+    #     # Random horizontal flipping
+    #     if torch.rand(1) > 0.5:
+    #         image = transforms_f.hflip(image)
+    #         label = transforms_f.hflip(label)
+    #         if logits is not None:
+    #             logits = transforms_f.hflip(logits)
+
+    # Transform to tensor
+    image = transforms_f.to_tensor(image)
+    # label = (transforms_f.to_tensor(label) * 255).long()
+    if logits is not None:
+        logits = transforms_f.to_tensor(logits)
+
+    # Apply (ImageNet) normalisation
+    image = transforms_f.normalize(image, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    return image
 
 
 def no_resize_transform(image, label, logits=None, crop_size=(512, 512), scale_size=(0.8, 1.0), augmentation=True):
@@ -466,50 +552,13 @@ def get_aichallenge_idx(root, train=True, label_num=5):
     root = os.path.expanduser(root)
     if train:
         label_file_list = glob.glob(root + '/train/labeled_images/*.jpg')
-        unlabel_file_list = glob.glob(root + '/train/unlabeled_images/*.jpg')        
         label_file_list = [file.split('/')[-1].split('.')[0] for file in label_file_list]
-        unlabel_file_list = [file.split('/')[-1].split('.')[0] for file in unlabel_file_list]
-
-
-        # class-wise dataset
-        ## container_truck
-        container_truck_label_file_list = glob.glob(root + '/train/labeled_images/container_truck_*.jpg')
-        container_truck_unlabel_file_list = glob.glob(root + '/train/unlabeled_images/container_truck_*.jpg')
-        container_truck_label_file_list = [file.split('/')[-1].split('.')[0] for file in container_truck_label_file_list]
-        container_truck_unlabel_file_list = [file.split('/')[-1].split('.')[0] for file in container_truck_unlabel_file_list]
-
-        ## forklift_
-        forklift_label_file_list = glob.glob(root + '/train/labeled_images/forklift_*.jpg')
-        forklift_unlabel_file_list = glob.glob(root + '/train/unlabeled_images/forklift_*.jpg')
-        forklift_label_file_list = [file.split('/')[-1].split('.')[0] for file in forklift_label_file_list]
-        forklift_unlabel_file_list = [file.split('/')[-1].split('.')[0] for file in forklift_unlabel_file_list]
-
-        ## container_truck
-        reach_stacker_file_list = glob.glob(root + '/train/labeled_images/reach_stacker_*.jpg')
-        reach_stacker_unlabel_file_list = glob.glob(root + '/train/unlabeled_images/reach_stacker_*.jpg')
-        reach_stacker_file_list = [file.split('/')[-1].split('.')[0] for file in reach_stacker_file_list]
-        reach_stacker_unlabel_file_list = [file.split('/')[-1].split('.')[0] for file in reach_stacker_unlabel_file_list]
-
-        ## container_truck
-        ship_label_file_list = glob.glob(root + '/train/labeled_images/ship_*.jpg')
-        ship_unlabel_file_list = glob.glob(root + '/train/unlabeled_images/ship_*.jpg')
-        ship_label_file_list = [file.split('/')[-1].split('.')[0] for file in ship_label_file_list]
-        ship_unlabel_file_list = [file.split('/')[-1].split('.')[0] for file in ship_unlabel_file_list]
+        return label_file_list
 
     else:
-        sample_file_list = glob.glob(root + '/sample/train/labeled_images/*.jpg')
-        sample_file_list = [file.split('/')[-1].split('.')[0] for file in sample_file_list]
-        
-        # file_list = glob.glob(root + '/test/images/*.jpg')
-        file_list = ['RdbXUjLzhS.jpg', 'w0eeEkoRc9.jpg', 'LwZczs6zjy.jpg', 'hk7gs0hfwc.jpg', 'fdiEw6zwNF.jpg', '7xVd67Iem4.jpg', 'DsLHJJz88m.jpg', 'r7tobfsxEE.jpg', 'TDfaU9KHRv.jpg', 'qxhdFs6OWc.jpg', 'OKmUS7aWsf.jpg', 'PASNteWeEP.jpg', 'wx8PkqtjBS.jpg', 'bMj8r3Xc68.jpg', 'xTpiZNvhab.jpg', 'dbM6CRM094.jpg', 'ftEEniKObl.jpg', 'FAeUPKXLyB.jpg', 'ZwOHAZneuc.jpg', 'b5uCptLMJz.jpg', '6UJdL78mLj.jpg', 'YhVg3zqznL.jpg', 'b1CYxqWCqb.jpg', 'cumR7VGOtu.jpg', 'Frgr7uhGI5.jpg', 'C3EvyQAA2T.jpg', 'C8wdpBMODy.jpg']
-        file_list = [file.split('.')[0] for file in file_list]
-
-    if train:  
-        return label_file_list, unlabel_file_list, container_truck_label_file_list,container_truck_unlabel_file_list,forklift_label_file_list,forklift_unlabel_file_list,reach_stacker_file_list,reach_stacker_unlabel_file_list,ship_label_file_list,ship_unlabel_file_list
-
-
-    else:
-        return sample_file_list, file_list
+        label_file_list = glob.glob(root + '/test/labeled_images/*.jpg')
+        test_file_list = [file.split('/')[-1].split('.')[0] for file in label_file_list]
+        return test_file_list
 
 
 def get_sun_idx(root, train=True, label_num=5):
@@ -609,52 +658,23 @@ class BuildDataset(Dataset):
             image, label = transform(image_root, label_root, None, self.crop_size, self.scale_size, self.augmentation)
             return image, label.squeeze(0)
 
-        if self.dataset == 'aichallenge':
+        if self.dataset == 'dung':
             if self.train:
-                if self.islabel:
-                    image_root = Image.open(self.root + '/train/labeled_images/{}.jpg'.format(self.idx_list[index]))
-                else:
-                    image_root = Image.open(
-                        self.root + '/train/unlabeled_images/{}.jpg'.format(self.idx_list[index]))
-                if self.apply_partial is None:
-                    if self.islabel:
-                        label_root = Image.open(self.root + '/train/labels/{}.png'.format(self.idx_list[index]))
-                        label_root = Image.fromarray(aichallenge_class_map(np.array(label_root)))
-                    else:
-                        label_root = Image.open(self.root + '/train/unlabeled_images/{}.jpg'.format(self.idx_list[index]))
-                        label_root = Image.fromarray(unlabeled_aichallenge_class_map(np.array(label_root)))
-                else:
-                    label_root = Image.open(self.root + '/labels/train_{}_{}/{}.png'.format(self.apply_partial,  self.partial_seed, self.idx_list[index]))
-                    label_root = Image.fromarray(unlabeled_aichallenge_class_map(np.array(label_root)))
+                image_root = Image.open(self.root + '/train/labeled_images/{}.jpg'.format(self.idx_list[index]))
+                label_root = Image.open(self.root + '/train/labels/{}.jpg'.format(self.idx_list[index]))
+                label_root = Image.fromarray(aichallenge_class_map(np.array(label_root)[...,0]))
                 # print("self.idx_list[index]",self.idx_list[index])
                 image, label = transform(image_root, label_root, None, self.crop_size, self.scale_size,
                                          self.augmentation)
-                if len(self.idx_list[index].split('_')) == 3:
-                    label_name = self.idx_list[index].split('_')[0] + '_' + self.idx_list[index].split('_')[1]
-                else:
-                    label_name = self.idx_list[index].split('_')[0]
-
-                label_key = self.class_map[label_name]
-                return image, label.squeeze(0), torch.tensor(label_key)
+                return image, label.squeeze(0)
             else:
-                if self.islabel:
-                    image_root = Image.open(self.root + '/sample/train/labeled_images/{}.jpg'.format(self.idx_list[index]))
-                    label_root = Image.open(self.root + '/sample/train/labels/{}.png'.format(self.idx_list[index]))
-                    label_root = Image.fromarray(aichallenge_class_map(np.array(label_root)))
-                    if len(self.idx_list[index].split('_')) == 3:
-                        label_name = self.idx_list[index].split('_')[0] + '_' + self.idx_list[index].split('_')[1]
-                    else:
-                        label_name = self.idx_list[index].split('_')[0]
-
-                    label_key = self.class_map[label_name]
-                else:
-                    image_root = Image.open(self.root + '/test/images/{}.jpg'.format(self.idx_list[index]))
-                    label_root = Image.open(self.root + '/test/images/{}.jpg'.format(self.idx_list[index]))
-                    label_root = Image.fromarray(unlabeled_aichallenge_class_map(np.array(label_root)))
-                    label_key = 0
+                image_root = Image.open(self.root + '/test/labeled_images/{}.jpg'.format(self.idx_list[index]))
+                label_root = Image.open(self.root + '/test/labels/{}.jpg'.format(self.idx_list[index]))
+                label_root = Image.fromarray(aichallenge_class_map(np.array(label_root)[...,0]))
 
                 image, label = one_sample_transform(image_root, label_root, None, list(label_root.size), self.scale_size, self.augmentation)
-            return cv2.resize(np.asarray(image_root),(self.crop_size[0],self.crop_size[1])), image, label.squeeze(0), torch.tensor(label_key)
+            # return cv2.resize(np.asarray(image_root),(self.crop_size[0],self.crop_size[1])), image, label.squeeze(0)
+            return image, label.squeeze(0)
 
         if self.dataset == 'sun':
             if self.train:
@@ -700,17 +720,16 @@ class BuildDataLoader:
             self.train_l_idx, self.train_u_idx = get_cityscapes_idx(self.data_path, train=True, label_num=num_labels)
             self.test_idx = get_cityscapes_idx(self.data_path, train=False)
 
-        if dataset == 'aichallenge':
-            self.data_path = 'dataset/aichallenge/'
+        if dataset == 'dung':
+            self.data_path = 'dataset/dung/'
             self.im_size = [512, 512]
             self.crop_size = [448, 448]
             # self.crop_size = [512, 512]
-            self.num_segments = 5
+            self.num_segments = 17
             self.scale_size = (0.8, 1.0)
             self.batch_size = batch_size
-            self.train_l_idx, self.train_u_idx, self.container_truck_train_l_idx,self.container_truck_train_u_idx,self.forklift_train_l_idx,self.forklift_train_u_idx,\
-            self.reach_stacker_train_l_idx,self.reach_stacker_train_u_idx,self.ship_label_train_l_idx,self.ship_unlabel_train_u_idx = get_aichallenge_idx(self.data_path, train=True, label_num=num_labels)
-            self.test_sample_idx, self.test_idx  = get_aichallenge_idx(self.data_path, train=False)
+            self.train_l_idx = get_aichallenge_idx(self.data_path, train=True, label_num=num_labels)
+            self.test_idx  = get_aichallenge_idx(self.data_path, train=False)
 
         if dataset == 'sun':
             self.data_path = 'dataset/sun'
@@ -726,166 +745,35 @@ class BuildDataLoader:
             self.train_l_idx = self.train_u_idx
 
     def build(self, supervised=False, partial=None, partial_seed=None):
-        train_l_dataset = BuildDataset(self.data_path, self.dataset, self.train_l_idx,
+        train_dataset = BuildDataset(self.data_path, self.dataset, self.train_l_idx,
                                        crop_size=self.crop_size, scale_size=self.scale_size,
                                        augmentation=True, train=True, apply_partial=partial, partial_seed=partial_seed,islabel=True)
-        train_u_dataset = BuildDataset(self.data_path, self.dataset, self.train_u_idx,
-                                       crop_size=self.crop_size, scale_size=(1.0, 1.0),
-                                       augmentation=False, train=True, apply_partial=partial, partial_seed=partial_seed,islabel=False)
-
-
-
-
-        container_truck_train_l_dataset = BuildDataset(self.data_path, self.dataset, self.container_truck_train_l_idx,
-                                       crop_size=self.crop_size, scale_size=self.scale_size,
-                                       augmentation=True, train=True, apply_partial=partial, partial_seed=partial_seed,islabel=True)
-        container_truck_train_u_dataset = BuildDataset(self.data_path, self.dataset, self.container_truck_train_u_idx,
-                                       crop_size=self.crop_size, scale_size=(1.0, 1.0),
-                                       augmentation=False, train=True, apply_partial=partial, partial_seed=partial_seed,islabel=False)
-        forklift_train_l_dataset = BuildDataset(self.data_path, self.dataset, self.forklift_train_l_idx,
-                                       crop_size=self.crop_size, scale_size=self.scale_size,
-                                       augmentation=True, train=True, apply_partial=partial, partial_seed=partial_seed,islabel=True)
-        forklift_train_u_dataset = BuildDataset(self.data_path, self.dataset, self.forklift_train_u_idx,
-                                       crop_size=self.crop_size, scale_size=(1.0, 1.0),
-                                       augmentation=False, train=True, apply_partial=partial, partial_seed=partial_seed,islabel=False)
-        reach_stacker_train_l_dataset = BuildDataset(self.data_path, self.dataset, self.reach_stacker_train_l_idx,
-                                       crop_size=self.crop_size, scale_size=self.scale_size,
-                                       augmentation=True, train=True, apply_partial=partial, partial_seed=partial_seed,islabel=True)
-        reach_stacker_train_u_dataset = BuildDataset(self.data_path, self.dataset, self.reach_stacker_train_u_idx,
-                                       crop_size=self.crop_size, scale_size=(1.0, 1.0),
-                                       augmentation=False, train=True, apply_partial=partial, partial_seed=partial_seed,islabel=False)
-        ship_train_l_dataset = BuildDataset(self.data_path, self.dataset, self.ship_label_train_l_idx,
-                                       crop_size=self.crop_size, scale_size=self.scale_size,
-                                       augmentation=True, train=True, apply_partial=partial, partial_seed=partial_seed,islabel=True)
-        ship_train_u_dataset = BuildDataset(self.data_path, self.dataset, self.ship_unlabel_train_u_idx,
-                                       crop_size=self.crop_size, scale_size=(1.0, 1.0),
-                                       augmentation=False, train=True, apply_partial=partial, partial_seed=partial_seed,islabel=False)
-
-        test_sample_dataset = BuildDataset(self.data_path, self.dataset, self.test_sample_idx,
-                                       crop_size=self.crop_size, scale_size=(1.0, 1.0),
-                                       augmentation=False, train=False,islabel=True)
         test_dataset = BuildDataset(self.data_path, self.dataset, self.test_idx,
                                        crop_size=self.crop_size, scale_size=(1.0, 1.0),
                                        augmentation=False, train=False)
 
-        if supervised:  # no unlabelled dataset needed, double batch-size to match the same number of training samples
-            self.batch_size = self.batch_size * 2
+        # if supervised:  # no unlabelled dataset needed, double batch-size to match the same number of training samples
+        #     self.batch_size = self.batch_size * 2
 
-        num_samples = self.batch_size * 100  # for total 40k iterations with 200 epochs
+        num_samples = self.batch_size * 10  # for total 40k iterations with 200 epochs
 
         train_l_loader = torch.utils.data.DataLoader(
-            train_l_dataset,
+            train_dataset,
             batch_size=self.batch_size,
-            sampler=sampler.RandomSampler(data_source=train_l_dataset,
+            sampler=sampler.RandomSampler(data_source=train_dataset,
                                           replacement=True,
                                           num_samples=num_samples),
             drop_last=True,
         )
 
-        if not supervised:
-            train_u_loader = torch.utils.data.DataLoader(
-                train_u_dataset,
-                batch_size=self.batch_size,
-                sampler=sampler.RandomSampler(data_source=train_u_dataset,
-                                              replacement=True,
-                                              num_samples=num_samples),
-                drop_last=True,
-            )
 
-
-        container_truck_train_l_loader = torch.utils.data.DataLoader(
-            container_truck_train_l_dataset,
-            batch_size=self.batch_size,
-            sampler=sampler.RandomSampler(data_source=container_truck_train_l_dataset,
-                                          replacement=True,
-                                          num_samples=num_samples),
-            drop_last=True,
-        )
-
-        if not supervised:
-            container_truck_train_u_loader = torch.utils.data.DataLoader(
-                container_truck_train_u_dataset,
-                batch_size=self.batch_size,
-                sampler=sampler.RandomSampler(data_source=container_truck_train_u_dataset,
-                                              replacement=True,
-                                              num_samples=num_samples),
-                drop_last=True,
-            )
-
-        forklift_train_l_loader = torch.utils.data.DataLoader(
-            forklift_train_l_dataset,
-            batch_size=self.batch_size,
-            sampler=sampler.RandomSampler(data_source=forklift_train_l_dataset,
-                                          replacement=True,
-                                          num_samples=num_samples),
-            drop_last=True,
-        )
-
-        if not supervised:
-            forklift_train_u_loader = torch.utils.data.DataLoader(
-                forklift_train_u_dataset,
-                batch_size=self.batch_size,
-                sampler=sampler.RandomSampler(data_source=forklift_train_u_dataset,
-                                              replacement=True,
-                                              num_samples=num_samples),
-                drop_last=True,
-            )
-
-        reach_stacker_train_l_loader = torch.utils.data.DataLoader(
-            reach_stacker_train_l_dataset,
-            batch_size=self.batch_size,
-            sampler=sampler.RandomSampler(data_source=reach_stacker_train_l_dataset,
-                                          replacement=True,
-                                          num_samples=num_samples),
-            drop_last=True,
-        )
-
-        if not supervised:
-            reach_stacker_train_u_loader = torch.utils.data.DataLoader(
-                reach_stacker_train_u_dataset,
-                batch_size=self.batch_size,
-                sampler=sampler.RandomSampler(data_source=reach_stacker_train_u_dataset,
-                                              replacement=True,
-                                              num_samples=num_samples),
-                drop_last=True,
-            )
-
-        ship_train_l_loader = torch.utils.data.DataLoader(
-            ship_train_l_dataset,
-            batch_size=self.batch_size,
-            sampler=sampler.RandomSampler(data_source=ship_train_l_dataset,
-                                          replacement=True,
-                                          num_samples=num_samples),
-            drop_last=True,
-        )
-
-        if not supervised:
-            ship_train_u_loader = torch.utils.data.DataLoader(
-                ship_train_u_dataset,
-                batch_size=self.batch_size,
-                sampler=sampler.RandomSampler(data_source=ship_train_u_dataset,
-                                              replacement=True,
-                                              num_samples=num_samples),
-                drop_last=True,
-            )
-
-
-
-
-        test_sample_loader = torch.utils.data.DataLoader(
-            test_sample_dataset,
-            batch_size=1,
-            shuffle=False,
-        )
         test_loader = torch.utils.data.DataLoader(
             test_dataset,
             batch_size=1,
             shuffle=False,
         )
-        if supervised:
-            return train_l_loader, test_loader
-        else:
-            return train_l_loader, train_u_loader, test_sample_loader, test_loader, container_truck_train_l_loader, container_truck_train_u_loader, forklift_train_l_loader, forklift_train_u_loader, reach_stacker_train_l_loader, reach_stacker_train_u_loader, ship_train_l_loader, ship_train_u_loader
+        return train_l_loader, test_loader
+
 
 
 # --------------------------------------------------------------------------------
