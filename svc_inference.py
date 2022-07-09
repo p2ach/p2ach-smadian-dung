@@ -44,7 +44,11 @@ def infer(input_json,runner):
                                                    scale_size=(1.0, 1.0), augmentation=False)
     print("im_tensor : ", im_tensor.shape)
     im_tensor = im_tensor.to('cpu')
-    logits, _ = runner.run(im_tensor.unsqueeze(0))
+    try:
+        logits, _ = runner.run(im_tensor.unsqueeze(0))
+    except Exception as e:
+        logits, _ = runner(im_tensor.unsqueeze(0))
+
     list_result_outputs=postprocess(im_tensor,logits)
     print("result : ", list_result_outputs)
     return list_result_outputs
