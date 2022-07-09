@@ -1,0 +1,9 @@
+awscli
+boto3
+h5py
+torch
+torchvision
+opencv-python-headless
+bentoml
+aiohttp==3.8.1
+torchaudio
