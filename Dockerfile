@@ -70,8 +70,8 @@ WORKDIR /var/task
 COPY app.py ./
 COPY network network
 COPY model_weights model_weights
-COPY build_data build_data
-COPY svc_inference svc_inference
+COPY build_data.py ./
+COPY svc_inference.py ./
 
 
 # Set the CMD to your handler
