@@ -1,7 +1,6 @@
 from torch.utils.data.dataset import Dataset
 from PIL import Image
 from PIL import ImageFilter
-import pandas as pd
 import numpy as np
 import torch
 import os
