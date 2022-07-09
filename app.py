@@ -7,6 +7,13 @@ from svc_inference import infer
 
 def lambda_handler(event, context):
     # 1. s3 put event 발생시
+
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps(event)
+    }
+
     img_base64 = event["img_base64"]
     num_segments = 17
     model = DeepLabv3Plus(models.resnet101(), num_classes=num_segments)
