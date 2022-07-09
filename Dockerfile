@@ -71,7 +71,9 @@ COPY app.py ./
 COPY network network
 COPY model_weights model_weights
 COPY build_data.py ./
+COPY module_list.py ./
 COPY svc_inference.py ./
+COPY test_client.py ./
 
 
 # Set the CMD to your handler
