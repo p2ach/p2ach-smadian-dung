@@ -1,5 +1,6 @@
 import requests
 import json
+from io import BytesIO
 from torch import nn
 import bentoml
 from network.deeplabv3.deeplabv3 import *
@@ -16,13 +17,15 @@ import svc_inference
 
 
 def post_request(encoded_string):
-    URL = "http://localhost:3000/predict"
+    URL = "https://gxciuxktg6.execute-api.ap-northeast-2.amazonaws.com/prod/dung"
     data = {'img_base64': encoded_string}
     # data = {'img_base64':"encoded_string"}
     r = requests.post(url=URL, data=json.dumps(data))
 
-    pastebin_url = r.text
-    print("The pastebin URL is:%s" % pastebin_url)
+    # pastebin_url = r.json()
+    # print("The pastebin URL is:%s" % pastebin_url)
+    return r.json().get('body')
+
 
 def run_local(encoded_string):
     # str_encoded_string=encoded_string.decode('ascii')
@@ -43,10 +46,25 @@ if __name__=="__main__":
     imgs_list=[]
     for img in list_test_imgs:
         try:
-            with open("dataset/dung/test/labeled_images/"+img, "rb") as image_file:
-                encoded_string = base64.b64encode(image_file.read()).decode('ascii')
+
+            img_rgb = Image.open("dataset/dung/test/labeled_images/"+img).convert('RGB')
+            img_rgb=img_rgb.resize((448,448))
+            buffered = BytesIO()
+            img_rgb.save(buffered, format="PNG")
+            encoded_string = base64.b64encode(buffered.getvalue()).decode('ascii')
+
+
+            # with open("dataset/dung/test/labeled_images/"+img, "rb") as image_file:
+            #     encoded_string = base64.b64encode(image_file.read()).decode('ascii')
             # print(len(encoded_string))
-            pred=run_local(encoded_string)
+
+            if False:
+                pred=run_local(encoded_string)
+                code_result=json.loads(pred['body'])['code']
+            else:
+                pred = post_request(encoded_string)
+                code_result = json.loads(pred)['code']
+
             np_mask=np.array(Image.open("dataset/dung/test/labels/"+img).convert('RGB'))
             for uni_id in np.unique(np_mask):
                 if uni_id !=0:
@@ -55,11 +73,11 @@ if __name__=="__main__":
                     else:
                         ans = 'FAIL'
 
-            print("result, labels : ", ans, np.unique(np_mask),json.loads(pred['body'])['code'])
+            print("result, labels : ", ans, np.unique(np_mask),code_result)
             imgs_list.append(img.split('.')[0])
 
         except Exception as e:
-            print("pass to this image")
+            print("pass to this image",e)
     print("imgs_list : ", imgs_list)
 
 
