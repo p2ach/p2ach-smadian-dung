@@ -21,9 +21,6 @@ def post_request(encoded_string):
     data = {'img_base64': encoded_string}
     # data = {'img_base64':"encoded_string"}
     r = requests.post(url=URL, data=json.dumps(data))
-
-    # pastebin_url = r.json()
-    # print("The pastebin URL is:%s" % pastebin_url)
     return r.json().get('body')
 
 
@@ -68,13 +65,18 @@ if __name__=="__main__":
             np_mask=np.array(Image.open("dataset/dung/test/labels/"+img).convert('RGB'))
             for uni_id in np.unique(np_mask):
                 if uni_id !=0:
-                    if uni_id in svc_inference.class_map:
-                        ans='OK'
+                    label_code=svc_inference.class_map[uni_id]
+                    if svc_inference.class_map[uni_id] in code_result:
+                        ans = 'OK'
                     else:
                         ans = 'FAIL'
+                        break
+
+            if ans == 'OK' and len(np.unique(np_mask)[1:])==len(code_result):
+                imgs_list.append(img.split('.')[0])
 
             print("result, labels : ", ans, np.unique(np_mask),code_result)
-            imgs_list.append(img.split('.')[0])
+
 
         except Exception as e:
             print("pass to this image",e)

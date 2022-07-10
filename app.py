@@ -17,7 +17,4 @@ def lambda_handler(event, context):
     model.eval()
     code=infer(img_base64,model)
     pred={'code':code}
-    return {
-        'statusCode': 200,
-        'body': json.dumps(pred)
-    }
+    return code
