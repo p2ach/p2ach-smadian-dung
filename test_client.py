@@ -12,7 +12,7 @@ import io, base64
 from build_data import *
 from svc_inference import infer
 from app import lambda_handler
-
+import svc_inference
 
 
 def post_request(encoded_string):
@@ -36,11 +36,31 @@ def run_local(encoded_string):
     # # dec_encoded_string=str_encoded_string.encode('ascii')
     # # dec_encoded_string=bytes(str_encoded_string,encoding='utf-8')
     # pred = infer(encoded_string,runner)
-    print("pred : ",pred)
+    return pred
 
 if __name__=="__main__":
-    with open("dataset/dung/test/labeled_images/647.png", "rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read()).decode('ascii')
-    print(len(encoded_string))
-    run_local(encoded_string)
-    # post_request(encoded_string)
+    list_test_imgs = os.listdir("dataset/dung/test/labeled_images")
+    imgs_list=[]
+    for img in list_test_imgs:
+        try:
+            with open("dataset/dung/test/labeled_images/"+img, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode('ascii')
+            # print(len(encoded_string))
+            pred=run_local(encoded_string)
+            np_mask=np.array(Image.open("dataset/dung/test/labels/"+img).convert('RGB'))
+            for uni_id in np.unique(np_mask):
+                if uni_id !=0:
+                    if uni_id in svc_inference.class_map:
+                        ans='OK'
+                    else:
+                        ans = 'FAIL'
+
+            print("result, labels : ", ans, np.unique(np_mask),json.loads(pred['body'])['code'])
+            imgs_list.append(img.split('.')[0])
+
+        except Exception as e:
+            print("pass to this image")
+    print("imgs_list : ", imgs_list)
+
+
+        # post_request(encoded_string)

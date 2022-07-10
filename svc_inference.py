@@ -71,10 +71,10 @@ def postprocess(im_tensor,logits):
 
 def infer(input_json,runner):
     # print("input_json",input_json)
-    img=Image.open(io.BytesIO(base64.decodebytes(input_json.encode('ascii'))))
+    img=Image.open(io.BytesIO(base64.decodebytes(input_json.encode('ascii')))).convert('RGB')
     im_tensor = one_sample_transform_nolabel(img, None, crop_size=list(img.size).reverse(),
                                                    scale_size=(1.0, 1.0), augmentation=False)
-    print("im_tensor : ", im_tensor.shape)
+    # print("im_tensor : ", im_tensor.shape)
     im_tensor = im_tensor.to('cpu')
     try:
         logits, _ = runner.run(im_tensor.unsqueeze(0))
@@ -82,7 +82,6 @@ def infer(input_json,runner):
         logits, _ = runner(im_tensor.unsqueeze(0))
 
     list_result_outputs=postprocess(im_tensor,logits)
-    print("result : ", list_result_outputs)
     return list_result_outputs
 
 
