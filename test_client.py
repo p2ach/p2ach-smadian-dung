@@ -39,7 +39,7 @@ def run_local(encoded_string):
     print("pred : ",pred)
 
 if __name__=="__main__":
-    with open("dataset/dung/test/labeled_images/test_647.jpg", "rb") as image_file:
+    with open("dataset/dung/test/labeled_images/647.png", "rb") as image_file:
         encoded_string = base64.b64encode(image_file.read()).decode('ascii')
     print(len(encoded_string))
     run_local(encoded_string)
