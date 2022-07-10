@@ -21,6 +21,7 @@ def transform(image, label, logits=None, crop_size=(512, 512), scale_size=(0.8, 
     # Random rescale image
     raw_w, raw_h = image.size
 
+
     if raw_w > 600 or raw_h > 600:
         if raw_w > raw_h:
             as_ratio = raw_w / 600
@@ -42,6 +43,8 @@ def transform(image, label, logits=None, crop_size=(512, 512), scale_size=(0.8, 
 
     # scale_ratio = random.uniform(scale_size[0], scale_size[1])
     # #
+
+
     resized_size = (600,600)
     crop_size = (448,448)
     # resized_size = (int(raw_h * scale_ratio), int(raw_w * scale_ratio))
@@ -74,6 +77,7 @@ def transform(image, label, logits=None, crop_size=(512, 512), scale_size=(0.8, 
         label = transforms_f.pad(label, padding=(0, 0, right_pad, bottom_pad), fill=255, padding_mode='constant')
         if logits is not None:
             logits = transforms_f.pad(logits, padding=(0, 0, right_pad, bottom_pad), fill=0, padding_mode='constant')
+
 
     # Random Cropping
     #print("image.size",image.size)
@@ -108,14 +112,18 @@ def transform(image, label, logits=None, crop_size=(512, 512), scale_size=(0.8, 
         #     if logits is not None:
         #         logits = transforms_f.vflip(logits)
 
+
     # Transform to tensor
     image = transforms_f.to_tensor(image)
-    label = transforms_f.to_tensor(label).long()# * 255).long()
+    label = (transforms_f.to_tensor(label) * 255).long()
+
     label[label == 255] = -1  # invalid pixels are re-mapped to index -1
     if logits is not None:
         logits = transforms_f.to_tensor(logits)
 
     # Apply (ImageNet) normalisation
+    # a=np.asarray(label)
+
     image = transforms_f.normalize(image, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     # image = transforms_f.normalize(image, mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5])
     if logits is not None:
@@ -201,8 +209,8 @@ def one_sample_transform(image, label, logits=None, crop_size=(448, 448), scale_
 
     # Transform to tensor
     image = transforms_f.to_tensor(image)
-    # label = (transforms_f.to_tensor(label) * 255).long()
-    label = transforms_f.to_tensor(label).long()
+    label = (transforms_f.to_tensor(label) * 255).long()
+    # label = transforms_f.to_tensor(label).long()
     label[label == 255] = -1  # invalid pixels are re-mapped to index -1
     if logits is not None:
         logits = transforms_f.to_tensor(logits)
@@ -550,12 +558,12 @@ def get_cityscapes_idx(root, train=True, label_num=5):
 def get_aichallenge_idx(root, train=True, label_num=5):
     root = os.path.expanduser(root)
     if train:
-        label_file_list = glob.glob(root + '/train/labeled_images/*.jpg')
+        label_file_list = glob.glob(root + '/train/labels/*.png')
         label_file_list = [file.split('/')[-1].split('.')[0] for file in label_file_list]
         return label_file_list
 
     else:
-        label_file_list = glob.glob(root + '/test/labeled_images/*.jpg')
+        label_file_list = glob.glob(root + '/test/labels/*.png')
         test_file_list = [file.split('/')[-1].split('.')[0] for file in label_file_list]
         return test_file_list
 
@@ -659,16 +667,17 @@ class BuildDataset(Dataset):
 
         if self.dataset == 'dung':
             if self.train:
-                image_root = Image.open(self.root + '/train/labeled_images/{}.jpg'.format(self.idx_list[index]))
-                label_root = Image.open(self.root + '/train/labels/{}.jpg'.format(self.idx_list[index]))
+                image_root = Image.open(self.root + '/train/labeled_images/{}.png'.format(self.idx_list[index])).convert('RGB')
+                label_root = Image.open(self.root + '/train/labels/{}.png'.format(self.idx_list[index]))
                 label_root = Image.fromarray(aichallenge_class_map(np.array(label_root)[...,0]))
+
                 # print("self.idx_list[index]",self.idx_list[index])
                 image, label = transform(image_root, label_root, None, self.crop_size, self.scale_size,
                                          self.augmentation)
                 return image, label.squeeze(0)
             else:
-                image_root = Image.open(self.root + '/test/labeled_images/{}.jpg'.format(self.idx_list[index]))
-                label_root = Image.open(self.root + '/test/labels/{}.jpg'.format(self.idx_list[index]))
+                image_root = Image.open(self.root + '/test/labeled_images/{}.png'.format(self.idx_list[index])).convert('RGB')
+                label_root = Image.open(self.root + '/test/labels/{}.png'.format(self.idx_list[index]))
                 label_root = Image.fromarray(aichallenge_class_map(np.array(label_root)[...,0]))
 
                 image, label = one_sample_transform(image_root, label_root, None, list(label_root.size), self.scale_size, self.augmentation)
@@ -724,7 +733,7 @@ class BuildDataLoader:
             self.im_size = [512, 512]
             self.crop_size = [448, 448]
             # self.crop_size = [512, 512]
-            self.num_segments = 17
+            self.num_segments = 14
             self.scale_size = (0.8, 1.0)
             self.batch_size = batch_size
             self.train_l_idx = get_aichallenge_idx(self.data_path, train=True, label_num=num_labels)

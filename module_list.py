@@ -209,6 +209,8 @@ class ConfMatrix(object):
         h = self.mat.float()
         acc = torch.diag(h).sum() / h.sum()
         iu = torch.diag(h) / (h.sum(1) + h.sum(0) - torch.diag(h))
+        temp_mu = h.sum(1) + h.sum(0) - torch.diag(h)
+        # iu = torch.tensor([u if m != 0.0 else 0.0 for u, m in zip(iu,temp_mu)])
         return torch.mean(iu).item(), acc.item()
 
 

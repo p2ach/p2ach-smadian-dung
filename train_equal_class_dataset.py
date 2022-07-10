@@ -13,7 +13,7 @@ from network.deeplabv2 import *
 from build_data import *
 from module_list import *
 import cv2
-
+torch.backends.cudnn.enabled = False
 transform = T.ToPILImage()
 
 parser = argparse.ArgumentParser(description='Semi-supervised Segmentation with Perfect Labels')
@@ -21,7 +21,7 @@ parser.add_argument('--mode', default=None, type=str)
 parser.add_argument('--port', default=None, type=int)
 
 parser.add_argument('--gpu', default=0, type=int)
-parser.add_argument('--num_labels', default=17, type=int, help='number of labelled training data, set 0 to use all training data')
+parser.add_argument('--num_labels', default=14, type=int, help='number of labelled training data, set 0 to use all training data')
 # parser.add_argument('--lr', default=2.5e-3, type=float)
 parser.add_argument('--lr', default=0.0005, type=float)
 parser.add_argument('--weight_decay', default=5e-4, type=float)
@@ -37,7 +37,7 @@ parser.add_argument('--temp', default=0.5, type=float)
 parser.add_argument('--output_dim', default=256, type=int, help='output dimension from representation head')
 parser.add_argument('--backbone', default='deeplabv3p', type=str, help='choose backbone: deeplabv3p, deeplabv2')
 parser.add_argument('--seed', default=191123, type=int)
-parser.add_argument('--batch_size', default=32, type=int)
+parser.add_argument('--batch_size', default=4, type=int)
 
 args = parser.parse_args()
 
@@ -50,6 +50,7 @@ train_loader, test_loader = data_loader.build(supervised=False)
 
 # Load Semantic Network
 device = torch.device("cuda:{:d}".format(args.gpu) if torch.cuda.is_available() else "cpu")
+# device = 'cpu'
 if args.backbone == 'deeplabv3p':
     model = DeepLabv3Plus(models.resnet101(pretrained=True), num_classes=data_loader.num_segments, output_dim=args.output_dim).to(device)
 elif args.backbone == 'deeplabv2':
@@ -82,6 +83,7 @@ for index in range(total_epoch):
     u_conf_mat = ConfMatrix(data_loader.num_segments)
     # for i in range(1):
     for i in tqdm(range(train_epoch)):
+
         train_data, train_label = train_dataset.next()
         train_data, train_label = train_data.to(device), train_label.to(device)
 
@@ -135,6 +137,7 @@ for index in range(total_epoch):
                 conf_mat.update(pred_large.argmax(1).flatten(), test_label.flatten())
                 avg_cost[index, 3:] += loss.item() / test_epoch
             avg_cost[index, 4:6] = conf_mat.get_metrics()
+            # print("conf_mat.get_metrics() : ",conf_mat.get_metrics())
 
 
     scheduler.step()
